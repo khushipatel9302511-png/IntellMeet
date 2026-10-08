@@ -7,11 +7,18 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { Server as SocketServer } from 'socket.io';
+
 import { connectDB } from './config/db';
 import { connectRedis } from './config/redis';
+
 import authRoutes from './routes/authRoutes';
 import meetingRoutes from './routes/meetingRoutes';
 import userRoutes from './routes/userRoutes';
+import aiSummaryRoutes from './routes/aiSummaryRoutes';
+import actionItemRoutes from './routes/actionItemRoutes';
+import workspaceRoutes from './routes/workspaceRoutes';
+import taskRoutes from './routes/taskRoutes';
+
 import { setupSocketHandlers } from './sockets/meetingSocket';
 
 const app = express();
@@ -19,7 +26,16 @@ const server = http.createServer(app);
 
 // Middlewares
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }));
+
+app.use(
+  cors({
+    origin:
+      process.env.CLIENT_URL ||
+      'http://localhost:5173',
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -27,16 +43,29 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/ai-summary', aiSummaryRoutes);
+app.use('/api/action-items', actionItemRoutes);
+app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // Health check endpoint
-app.get('/api/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'ok', service: 'IntellMeet Backend API', timestamp: new Date() });
-});
+app.get(
+  '/api/health',
+  (req: Request, res: Response) => {
+    res.status(200).json({
+      status: 'ok',
+      service: 'IntellMeet Backend API',
+      timestamp: new Date(),
+    });
+  }
+);
 
 // Socket.io Server Setup
 const io = new SocketServer(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin:
+      process.env.CLIENT_URL ||
+      'http://localhost:5173',
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -44,7 +73,8 @@ const io = new SocketServer(server, {
 
 setupSocketHandlers(io);
 
-const PORT = process.env.PORT || 5000;
+const PORT =
+  process.env.PORT || 5000;
 
 // Connect Services & Start Server
 const startServer = async () => {
@@ -52,7 +82,12 @@ const startServer = async () => {
   await connectRedis();
 
   server.listen(PORT, () => {
-    console.log(`[Server] Running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+    console.log(
+      `[Server] Running on port ${PORT} in ${
+        process.env.NODE_ENV ||
+        'development'
+      } mode`
+    );
   });
 };
 

@@ -1,0 +1,114 @@
+.meeting-room {
+  min-height: 100vh;
+  background: #111827;
+  color: white;
+}
+
+.meeting-room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 30px;
+  background: #1f2937;
+  border-bottom: 1px solid #374151;
+}
+
+.meeting-room-header h1 {
+  font-size: 24px;
+  margin-bottom: 5px;
+}
+
+.meeting-room-header p {
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.leave-button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #dc2626;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.leave-button:hover {
+  background: #b91c1c;
+}
+
+.meeting-room-content {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 85px);
+  padding: 25px;
+}
+
+.video-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 450px;
+  background: #030712;
+  border-radius: 12px;
+}
+
+.video-placeholder {
+  text-align: center;
+  color: #9ca3af;
+}
+
+.video-placeholder h2 {
+  color: white;
+  margin-bottom: 10px;
+}
+
+.meeting-controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 0 0;
+  flex-wrap: wrap;
+}
+
+.meeting-controls button {
+  padding: 12px 18px;
+  border: 1px solid #4b5563;
+  border-radius: 8px;
+  background: #1f2937;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.meeting-controls button:hover {
+  background: #374151;
+}
+
+@media (max-width: 700px) {
+  .meeting-room-header {
+    padding: 15px 20px;
+  }
+
+  .meeting-room-header h1 {
+    font-size: 20px;
+  }
+
+  .meeting-room-content {
+    padding: 15px;
+  }
+
+  .video-area {
+    min-height: 350px;
+  }
+
+  .meeting-controls {
+    gap: 8px;
+  }
+
+  .meeting-controls button {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}

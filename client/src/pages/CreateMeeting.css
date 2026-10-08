@@ -1,0 +1,150 @@
+.create-meeting-page {
+  min-height: 100vh;
+  background: #f4f7fb;
+}
+
+.create-meeting-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 40px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.create-meeting-header h1 {
+  font-size: 28px;
+  margin-bottom: 5px;
+}
+
+.create-meeting-header p {
+  color: #6b7280;
+}
+
+.back-button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #6b7280;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.back-button:hover {
+  background: #4b5563;
+}
+
+.create-meeting-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 50px 25px;
+}
+
+.meeting-form-card {
+  background: white;
+  padding: 35px;
+  border-radius: 16px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
+}
+
+.meeting-form-card h2 {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.form-description {
+  color: #6b7280;
+  margin-bottom: 30px;
+}
+
+.meeting-form-card form {
+  display: flex;
+  flex-direction: column;
+}
+
+.meeting-form-card label {
+  margin-bottom: 7px;
+  font-weight: 600;
+}
+
+.meeting-form-card input,
+.meeting-form-card textarea {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: Arial, sans-serif;
+}
+
+.meeting-form-card textarea {
+  resize: vertical;
+}
+
+.date-time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.primary-button {
+  padding: 13px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 5px;
+}
+
+.primary-button:hover {
+  background: #1d4ed8;
+}
+
+.success-box {
+  padding: 25px;
+  border-radius: 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.success-box h3 {
+  margin-bottom: 20px;
+}
+
+.success-box p {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.meeting-note {
+  color: #6b7280;
+  margin-top: 20px;
+}
+
+@media (max-width: 700px) {
+  .create-meeting-header {
+    padding: 20px;
+    gap: 15px;
+  }
+
+  .create-meeting-header h1 {
+    font-size: 23px;
+  }
+
+  .create-meeting-content {
+    padding: 30px 20px;
+  }
+
+  .meeting-form-card {
+    padding: 25px 20px;
+  }
+
+  .date-time-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
