@@ -24,6 +24,9 @@ import { setupSocketHandlers } from './sockets/meetingSocket';
 const app = express();
 const server = http.createServer(app);
 
+// Trust Render's reverse proxy
+app.set('trust proxy', 1);
+
 // Middlewares
 app.use(helmet());
 
@@ -73,8 +76,7 @@ const io = new SocketServer(server, {
 
 setupSocketHandlers(io);
 
-const PORT =
-  process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
 // Connect Services & Start Server
 const startServer = async () => {
@@ -84,8 +86,7 @@ const startServer = async () => {
   server.listen(PORT, () => {
     console.log(
       `[Server] Running on port ${PORT} in ${
-        process.env.NODE_ENV ||
-        'development'
+        process.env.NODE_ENV || 'development'
       } mode`
     );
   });
