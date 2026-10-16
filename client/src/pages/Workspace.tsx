@@ -20,13 +20,11 @@ type WorkspaceProps = {
   onLogout: () => void
 }
 
-const API_URL =
+const API_URL = (
   import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+).replace(/\/$/, '')
 
-function Workspace({
-  onBack,
-  onLogout,
-}: WorkspaceProps) {
+function Workspace({ onBack, onLogout }: WorkspaceProps) {
   const [workspaces, setWorkspaces] = useState<WorkspaceData[]>([])
   const [selectedWorkspace, setSelectedWorkspace] =
     useState<WorkspaceData | null>(null)
@@ -36,14 +34,25 @@ function Workspace({
   const [memberEmail, setMemberEmail] = useState('')
   const [addingMemberWorkspaceId, setAddingMemberWorkspaceId] =
     useState<string | null>(null)
+  const [deletingWorkspaceId, setDeletingWorkspaceId] =
+    useState<string | null>(null)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  const token = localStorage.getItem(
-    'intellmeet_access_token'
-  )
+  const token = localStorage.getItem('intellmeet_access_token')
+  const currentUserId = (() => {
+    try {
+      const savedUser = localStorage.getItem('intellmeet_user')
+      if (!savedUser) return ''
+
+      const user = JSON.parse(savedUser)
+      return user._id || user.id || user.userId || ''
+    } catch {
+      return ''
+    }
+  })()
 
   const loadWorkspaces = async () => {
     if (!token) {
@@ -52,35 +61,27 @@ function Workspace({
     }
 
     try {
-      const response = await fetch(
-        `${API_URL}/workspaces`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
+      const response = await fetch(`${API_URL}/workspaces`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+      })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(
-          data.message || 'Failed to load workspaces'
-        )
+        throw new Error(data.message || 'Failed to load workspaces')
       }
 
       setWorkspaces(data.workspaces || [])
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to load workspaces'
+        err instanceof Error ? err.message : 'Failed to load workspaces'
       )
     }
   }
 
   useEffect(() => {
-    loadWorkspaces()
+    void loadWorkspaces()
   }, [])
 
   const handleCreateWorkspace = async () => {
@@ -101,52 +102,39 @@ function Workspace({
     setSuccess('')
 
     try {
-      const response = await fetch(
-        `${API_URL}/workspaces`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name: name.trim(),
-            description: description.trim(),
-          }),
-        }
-      )
+      const response = await fetch(`${API_URL}/workspaces`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim(),
+        }),
+      })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(
-          data.message || 'Failed to create workspace'
-        )
+        throw new Error(data.message || 'Failed to create workspace')
       }
 
-      setWorkspaces((previous) => [
-        data.workspace,
-        ...previous,
-      ])
-
+      setWorkspaces((previous) => [data.workspace, ...previous])
       setName('')
       setDescription('')
-
       setSuccess('Workspace created successfully.')
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to create workspace'
+        err instanceof Error ? err.message : 'Failed to create workspace'
       )
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAddMember = async (
-    workspaceId: string
-  ) => {
+  const handleAddMember = async (workspaceId: string) => {
     if (!memberEmail.trim()) {
       setError('Please enter member email.')
       setSuccess('')
@@ -165,46 +153,91 @@ function Workspace({
 
     try {
       const response = await fetch(
-        `${API_URL}/workspaces/${workspaceId}/members`,
+        `${API_URL}/workspaces/${encodeURIComponent(workspaceId)}/members`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            email: memberEmail.trim(),
-          }),
+          credentials: 'include',
+          body: JSON.stringify({ email: memberEmail.trim() }),
         }
       )
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(
-          data.message || 'Failed to add member'
-        )
+        throw new Error(data.message || 'Failed to add member')
       }
 
       setWorkspaces((previous) =>
         previous.map((workspace) =>
-          workspace._id === workspaceId
-            ? data.workspace
-            : workspace
+          workspace._id === workspaceId ? data.workspace : workspace
         )
       )
 
       setMemberEmail('')
-
       setSuccess('Member added successfully.')
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to add member'
+        err instanceof Error ? err.message : 'Failed to add member'
       )
     } finally {
       setAddingMemberWorkspaceId(null)
+    }
+  }
+
+  const handleDeleteWorkspace = async (workspace: WorkspaceData) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete "${workspace.name}"? This action cannot be undone.`
+    )
+
+    if (!confirmed) return
+
+    if (!token) {
+      setError('Please login again.')
+      setSuccess('')
+      return
+    }
+
+    setDeletingWorkspaceId(workspace._id)
+    setError('')
+    setSuccess('')
+
+    try {
+      const response = await fetch(
+        `${API_URL}/workspaces/${encodeURIComponent(workspace._id)}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: 'include',
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete workspace')
+      }
+
+      setWorkspaces((previous) =>
+        previous.filter((item) => item._id !== workspace._id)
+      )
+
+      if (selectedWorkspace?._id === workspace._id) {
+        setSelectedWorkspace(null)
+      }
+
+      setSuccess('Workspace deleted successfully.')
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to delete workspace'
+      )
+    } finally {
+      setDeletingWorkspaceId(null)
     }
   }
 
@@ -224,228 +257,307 @@ function Workspace({
         minHeight: '100vh',
         padding: '30px',
         background: '#f5f7fb',
+        color: '#111827',
         fontFamily: 'Arial, sans-serif',
       }}
     >
-      <div
-        style={{
-          maxWidth: '900px',
-          margin: '0 auto',
-        }}
-      >
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            gap: '12px',
+            flexWrap: 'wrap',
             marginBottom: '30px',
           }}
         >
-          <button onClick={onBack}>
+          <button className="workspace-button" onClick={onBack}>
             ← Back to Dashboard
           </button>
 
-          <button onClick={onLogout}>
+          <button className="workspace-button" onClick={onLogout}>
             Logout
           </button>
         </div>
 
-        <h1>Team Workspace</h1>
+        <h1 style={{ color: '#111827', fontWeight: 800 }}>
+          Team Workspace
+        </h1>
 
-        <p style={{ color: '#666' }}>
+        <p style={{ color: '#374151' }}>
           Create and manage collaborative team workspaces.
         </p>
 
         {error && (
-          <p style={{ color: 'red' }}>
+          <p role="alert" style={{ color: '#b91c1c', fontWeight: 600 }}>
             {error}
           </p>
         )}
 
         {success && (
-          <p style={{ color: 'green' }}>
+          <p role="status" style={{ color: '#166534', fontWeight: 600 }}>
             {success}
           </p>
         )}
 
-        <section
-          style={{
-            background: 'white',
-            padding: '25px',
-            borderRadius: '12px',
-            border: '1px solid #ddd',
-            marginTop: '25px',
-          }}
-        >
+        <section className="workspace-card">
           <h2>Create Workspace</h2>
 
           <input
+            className="workspace-input"
             type="text"
             placeholder="Workspace name"
             value={name}
-            onChange={(e) =>
-              setName(e.target.value)
-            }
-            style={{
-              width: '100%',
-              padding: '12px',
-              marginBottom: '12px',
-              boxSizing: 'border-box',
-            }}
+            onChange={(e) => setName(e.target.value)}
           />
 
           <textarea
+            className="workspace-input workspace-textarea"
             placeholder="Workspace description"
             value={description}
-            onChange={(e) =>
-              setDescription(e.target.value)
-            }
-            style={{
-              width: '100%',
-              minHeight: '80px',
-              padding: '12px',
-              marginBottom: '12px',
-              boxSizing: 'border-box',
-            }}
+            onChange={(e) => setDescription(e.target.value)}
           />
 
           <button
+            className="workspace-button workspace-primary"
             onClick={handleCreateWorkspace}
             disabled={loading}
           >
-            {loading
-              ? 'Creating...'
-              : 'Create Workspace'}
+            {loading ? 'Creating...' : 'Create Workspace'}
           </button>
         </section>
 
         <section style={{ marginTop: '25px' }}>
-          <h2>My Workspaces</h2>
+          <h2 style={{ color: '#111827' }}>My Workspaces</h2>
 
           {workspaces.length === 0 ? (
-            <div
-              style={{
-                background: 'white',
-                padding: '25px',
-                borderRadius: '12px',
-                border: '1px solid #ddd',
-              }}
-            >
-              No workspaces yet.
-            </div>
+            <div className="workspace-card">No workspaces yet.</div>
           ) : (
-            workspaces.map((workspace) => (
-              <div
-                key={workspace._id}
-                style={{
-                  background: 'white',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  border: '1px solid #ddd',
-                  marginBottom: '15px',
-                }}
-              >
-                <h3>{workspace.name}</h3>
+            workspaces.map((workspace) => {
+              const ownerId =
+                typeof workspace.ownerId === 'object'
+                  ? workspace.ownerId?._id
+                  : workspace.ownerId
 
-                {workspace.description && (
-                  <p>{workspace.description}</p>
-                )}
+              const isOwner =
+                Boolean(currentUserId) &&
+                String(ownerId) === String(currentUserId)
 
-                <p>
-                  <strong>Owner:</strong>{' '}
-                  {workspace.ownerId?.name ||
-                    'Unknown'}
-                </p>
+              return (
+                <div className="workspace-card" key={workspace._id}>
+                  <h3>{workspace.name}</h3>
 
-                <p>
-                  <strong>Members:</strong>{' '}
-                  {workspace.members?.length || 0}
-                </p>
+                  {workspace.description && (
+                    <p>{workspace.description}</p>
+                  )}
 
-                {workspace.members?.length > 0 && (
-                  <div>
-                    <strong>Team Members:</strong>
-
-                    <ul>
-                      {workspace.members.map(
-                        (member) => (
-                          <li key={member._id}>
-                            {member.name} —{' '}
-                            {member.email}
-                          </li>
-                        )
-                      )}
-                    </ul>
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    marginTop: '20px',
-                    paddingTop: '20px',
-                    borderTop: '1px solid #eee',
-                  }}
-                >
-                  <h4>Add Team Member</h4>
-
-                  <input
-                    type="email"
-                    placeholder="Enter member email"
-                    value={memberEmail}
-                    onChange={(e) =>
-                      setMemberEmail(e.target.value)
-                    }
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      marginBottom: '10px',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-
-                  <button
-                    onClick={() =>
-                      handleAddMember(workspace._id)
-                    }
-                    disabled={
-                      addingMemberWorkspaceId ===
-                      workspace._id
-                    }
-                  >
-                    {addingMemberWorkspaceId ===
-                    workspace._id
-                      ? 'Adding...'
-                      : 'Add Member'}
-                  </button>
-                </div>
-
-                <div
-                  style={{
-                    marginTop: '20px',
-                    paddingTop: '20px',
-                    borderTop: '1px solid #eee',
-                  }}
-                >
-                  <h4>Kanban Task Management</h4>
-
-                  <p style={{ color: '#666' }}>
-                    Manage tasks using To Do, In Progress,
-                    and Completed columns.
+                  <p>
+                    <strong>Owner:</strong>{' '}
+                    {typeof workspace.ownerId === 'object'
+                      ? workspace.ownerId?.name || 'Unknown'
+                      : 'Workspace owner'}
                   </p>
 
-                  <button
-                    onClick={() =>
-                      setSelectedWorkspace(workspace)
-                    }
-                  >
-                    Open Kanban Board
-                  </button>
+                  <p>
+                    <strong>Members:</strong>{' '}
+                    {workspace.members?.length || 0}
+                  </p>
+
+                  {workspace.members?.length > 0 && (
+                    <div>
+                      <strong>Team Members:</strong>
+                      <ul>
+                        {workspace.members.map((member) => (
+                          <li key={member._id}>
+                            {member.name} — {member.email}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="workspace-divider">
+                    <h4>Add Team Member</h4>
+
+                    <input
+                      className="workspace-input"
+                      type="email"
+                      placeholder="Enter member email"
+                      value={memberEmail}
+                      onChange={(e) => setMemberEmail(e.target.value)}
+                    />
+
+                    <button
+                      className="workspace-button workspace-primary"
+                      onClick={() => handleAddMember(workspace._id)}
+                      disabled={addingMemberWorkspaceId === workspace._id}
+                    >
+                      {addingMemberWorkspaceId === workspace._id
+                        ? 'Adding...'
+                        : 'Add Member'}
+                    </button>
+                  </div>
+
+                  <div className="workspace-divider">
+                    <h4>Kanban Task Management</h4>
+                    <p style={{ color: '#374151' }}>
+                      Manage tasks using To Do, In Progress, and Completed
+                      columns.
+                    </p>
+
+                    <button
+                      className="workspace-button workspace-primary"
+                      onClick={() => setSelectedWorkspace(workspace)}
+                    >
+                      Open Kanban Board
+                    </button>
+                  </div>
+
+                  {isOwner && (
+                    <div className="workspace-delete-area">
+                      <button
+                        className="workspace-button workspace-delete"
+                        onClick={() => handleDeleteWorkspace(workspace)}
+                        disabled={deletingWorkspaceId === workspace._id}
+                      >
+                        {deletingWorkspaceId === workspace._id
+                          ? 'Deleting...'
+                          : 'Delete Workspace'}
+                      </button>
+                      <p>
+                        Only the workspace owner can delete this workspace.
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </section>
       </div>
+
+      <style>{`
+        .workspace-card {
+          background: #ffffff;
+          color: #111827;
+          padding: 25px;
+          border-radius: 12px;
+          border: 1px solid #cbd5e1;
+          margin-top: 20px;
+          overflow-wrap: anywhere;
+          box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+        }
+
+        .workspace-card h2,
+        .workspace-card h3,
+        .workspace-card h4 {
+          color: #111827;
+          font-weight: 800;
+        }
+
+        .workspace-card p,
+        .workspace-card li,
+        .workspace-card strong {
+          color: #1f2937;
+        }
+
+        .workspace-input {
+          display: block;
+          width: 100%;
+          box-sizing: border-box;
+          padding: 12px;
+          margin: 0 0 12px;
+          border: 1px solid #9ca3af;
+          border-radius: 8px;
+          background: #ffffff;
+          color: #111827;
+          font: inherit;
+        }
+
+        .workspace-input::placeholder {
+          color: #4b5563;
+          opacity: 1;
+        }
+
+        .workspace-input:focus {
+          outline: 2px solid #b68b40;
+          outline-offset: 1px;
+          border-color: #92400e;
+        }
+
+        .workspace-textarea {
+          min-height: 80px;
+          resize: vertical;
+        }
+
+        .workspace-button {
+          padding: 11px 16px;
+          border: 1px solid #374151;
+          border-radius: 8px;
+          background: #1f2937;
+          color: #ffffff;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .workspace-button:hover {
+          background: #111827;
+        }
+
+        .workspace-button:disabled {
+          opacity: 0.65;
+          cursor: not-allowed;
+        }
+
+        .workspace-primary {
+          background: #172554;
+          border-color: #172554;
+        }
+
+        .workspace-primary:hover {
+          background: #0f172a;
+        }
+
+        .workspace-divider {
+          margin-top: 20px;
+          padding-top: 20px;
+          border-top: 1px solid #cbd5e1;
+        }
+
+        .workspace-delete-area {
+          margin-top: 20px;
+          padding-top: 18px;
+          border-top: 1px solid #fecaca;
+        }
+
+        .workspace-delete {
+          background: #b91c1c;
+          border-color: #991b1b;
+        }
+
+        .workspace-delete:hover {
+          background: #991b1b;
+        }
+
+        .workspace-delete-area p {
+          margin-bottom: 0;
+          color: #4b5563;
+          font-size: 13px;
+        }
+
+        .workspace-button:focus-visible {
+          outline: 2px solid #b68b40;
+          outline-offset: 2px;
+        }
+
+        @media (max-width: 600px) {
+          .workspace-card {
+            padding: 18px;
+          }
+        }
+      `}</style>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { Response } from 'express'
+import { isValidObjectId } from 'mongoose'
 import { AuthRequest } from '../middleware/auth'
 import { Workspace } from '../models/Workspace'
 import { User } from '../models/User'
@@ -38,9 +39,9 @@ export const createWorkspace = async (
       workspace,
     })
   } catch (error) {
+    console.error('Create workspace error:', error)
     res.status(500).json({
       message: 'Error creating workspace',
-      error,
     })
   }
 }
@@ -64,13 +65,11 @@ export const getMyWorkspaces = async (
       .populate('members', 'name email')
       .sort({ createdAt: -1 })
 
-    res.status(200).json({
-      workspaces,
-    })
+    res.status(200).json({ workspaces })
   } catch (error) {
+    console.error('Fetch workspaces error:', error)
     res.status(500).json({
       message: 'Error fetching workspaces',
-      error,
     })
   }
 }
@@ -88,6 +87,13 @@ export const getWorkspaceById = async (
       return
     }
 
+    if (!isValidObjectId(id)) {
+      res.status(400).json({
+        message: 'Invalid workspace ID',
+      })
+      return
+    }
+
     const workspace = await Workspace.findOne({
       _id: id,
       members: userId,
@@ -102,13 +108,11 @@ export const getWorkspaceById = async (
       return
     }
 
-    res.status(200).json({
-      workspace,
-    })
+    res.status(200).json({ workspace })
   } catch (error) {
+    console.error('Fetch workspace error:', error)
     res.status(500).json({
       message: 'Error fetching workspace',
-      error,
     })
   }
 }
@@ -123,8 +127,13 @@ export const addMemberToWorkspace = async (
     const currentUserId = req.user?.userId
 
     if (!currentUserId) {
-      res.status(401).json({
-        message: 'Unauthorized',
+      res.status(401).json({ message: 'Unauthorized' })
+      return
+    }
+
+    if (!isValidObjectId(id)) {
+      res.status(400).json({
+        message: 'Invalid workspace ID',
       })
       return
     }
@@ -177,7 +186,6 @@ export const addMemberToWorkspace = async (
     workspace.members.push(user._id as any)
 
     await workspace.save()
-
     await workspace.populate('ownerId', 'name email')
     await workspace.populate('members', 'name email')
 
@@ -186,9 +194,59 @@ export const addMemberToWorkspace = async (
       workspace,
     })
   } catch (error) {
+    console.error('Add workspace member error:', error)
     res.status(500).json({
       message: 'Error adding workspace member',
-      error,
+    })
+  }
+}
+
+export const deleteWorkspace = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params
+    const userId = req.user?.userId
+
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' })
+      return
+    }
+
+    if (!isValidObjectId(id)) {
+      res.status(400).json({
+        message: 'Invalid workspace ID',
+      })
+      return
+    }
+
+    const workspace = await Workspace.findById(id)
+
+    if (!workspace) {
+      res.status(404).json({
+        message: 'Workspace not found',
+      })
+      return
+    }
+
+    if (workspace.ownerId.toString() !== userId) {
+      res.status(403).json({
+        message: 'Only the workspace owner can delete it',
+      })
+      return
+    }
+
+    await Workspace.findByIdAndDelete(id)
+
+    res.status(200).json({
+      message: 'Workspace deleted successfully',
+      workspaceId: id,
+    })
+  } catch (error) {
+    console.error('Delete workspace error:', error)
+    res.status(500).json({
+      message: 'Error deleting workspace',
     })
   }
 }

@@ -5,6 +5,7 @@ import {
   getMyWorkspaces,
   getWorkspaceById,
   addMemberToWorkspace,
+  deleteWorkspace,
 } from '../controllers/workspaceController'
 
 const router = Router()
@@ -15,5 +16,6 @@ router.post('/', createWorkspace)
 router.get('/', getMyWorkspaces)
 router.get('/:id', getWorkspaceById)
 router.post('/:id/members', addMemberToWorkspace)
+router.delete('/:id', deleteWorkspace)
 
 export default router
