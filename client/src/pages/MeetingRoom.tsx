@@ -172,36 +172,27 @@ function MeetingRoom({
       'Participant'
     )
   }
-
-  const startMedia = async () => {
+const startMedia = async () => {
     try {
       setError('')
 
       const stream =
-        await navigator.mediaDevices.getUserMedia(
-          {
-            video: true,
-            audio: true,
-          }
-        )
+        await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        })
 
       streamRef.current = stream
 
       setCameraOn(true)
       setMicOn(true)
 
-      if (videoRef.current) {
-        videoRef.current.srcObject =
-          stream
-
-        await videoRef.current
-          .play()
-          .catch(() => {})
-      }
-
       return true
     } catch (err) {
-      console.error(err)
+      console.error(
+        '[Camera] Failed to start media:',
+        err
+      )
 
       setError(
         'Camera or microphone permission was denied or is unavailable.'
@@ -210,7 +201,6 @@ function MeetingRoom({
       return false
     }
   }
-
   const createPeerConnection = (
     remoteSocketId: string
   ) => {
@@ -1097,6 +1087,50 @@ function MeetingRoom({
         null
     }
   }, [meetingId])
+  useEffect(() => {
+  const video = videoRef.current
+  const stream = streamRef.current
+
+  if (!video || !stream || screenSharing) {
+    return
+  }
+
+  const videoTrack = stream.getVideoTracks()[0]
+
+  if (!videoTrack || videoTrack.readyState !== 'live') {
+    console.warn('[Camera] Video track is not live.')
+    return
+  }
+
+  video.muted = true
+  video.autoplay = true
+  video.playsInline = true
+
+  if (video.srcObject !== stream) {
+    video.srcObject = stream
+  }
+
+  const playPreview = async () => {
+    try {
+      await video.play()
+      console.log('[Camera] Preview started successfully.')
+    } catch (err) {
+      console.error('[Camera] Preview playback failed:', err)
+    }
+  }
+
+  if (videoTrack.muted) {
+    videoTrack.addEventListener('unmute', playPreview, {
+      once: true,
+    })
+  }
+
+  void playPreview()
+
+  return () => {
+    videoTrack.removeEventListener('unmute', playPreview)
+  }
+}, [cameraOn, screenSharing])
 
   const toggleCamera = () => {
     const stream =
